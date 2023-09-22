@@ -111,6 +111,7 @@ catkin_package(
 #  DEPENDS system_lib
 )
 catkin_install_python(PROGRAMS scripts/leg_detector.py
+                               scripts/person_follower.py
                       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 ###########
