@@ -110,6 +110,8 @@ catkin_package(
 #  CATKIN_DEPENDS geometry_msgs roscpp rospy sensor_msgs sensor_msgs
 #  DEPENDS system_lib
 )
+catkin_install_python(PROGRAMS scripts/leg_detector.py
+                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 ###########
 ## Build ##

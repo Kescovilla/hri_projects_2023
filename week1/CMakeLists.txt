@@ -110,6 +110,17 @@ catkin_package(
 #  CATKIN_DEPENDS geometry_msgs rospy stage_ros std_msgs week0
 #  DEPENDS system_lib
 )
+catkin_install_python(PROGRAMS scripts/base_listener.py
+                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+catkin_install_python(PROGRAMS scripts/square_move.py
+                                 scripts/figure_eight_move.py
+                                 scripts/triangle_move.py
+                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+catkin_install_python(PROGRAMS scripts/obstacle_avoidance.py
+                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION} )
+
 
 ###########
 ## Build ##
