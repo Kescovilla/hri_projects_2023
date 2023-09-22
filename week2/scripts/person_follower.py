@@ -1,43 +1,72 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
+import tf2_ros
+from geometry_msgs.msg import Twist, TransformStamped
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Twist
-from people_msgs.msg import PositionMeasurementArray
+from tf.transformations import euler_from_quaternion
+import numpy as np
+import math
 
-class PersonFollower:
-    def __init__(self):
-        self.cmd_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-        self.laser_sub = rospy.Subscriber('/base_scan', LaserScan, self.laser_callback)
-        self.person_sub = rospy.Subscriber('/people_tracker_measurements', PositionMeasurementArray, self.person_callback)
-        self.person_position = None
+global laser_data
 
-    def laser_callback(self, msg):
-        move_cmd = Twist()
+def laser_callback(data):
+    global laser_data 
+    laser_data = data
 
-        halfway_index = len(msg.ranges) // 2
-        left_scan = msg.ranges[:halfway_index]
-        right_scan = msg.ranges[halfway_index:]
+def avoid_obstacle(msg):
+    if (msg.linear.x <= 0.01 and abs(msg.angular.z) <= 0.01):
+        msg.linear.x = 0
+        msg.angular.z = 0
+    else:
+        min_distance = min(laser_data.ranges)
+        if min_distance < 0.5: 
+            msg.linear.x = 0.0
+        elif msg.linear.x + 0.5 < min_distance:
+            msg.linear.x += 0.5
+        
+        if min_distance < 1.0:  
+            left_distances = sum(laser_data.ranges[:len(laser_data.ranges)//2])
+            right_distances = sum(laser_data.ranges[len(laser_data.ranges)//2:])
+            
+            if left_distances < right_distances:
+                msg.angular.z = 0.5  # Turn right
+            else:
+                msg.angular.z = -0.5  # Turn left
 
-        if self.person_position:
-            move_cmd.linear.x = 0.5 
-            error_angle = self.person_position.pose.pose.position.y
-            move_cmd.angular.z = -1.0 * error_angle
+    cmd_vel_publisher.publish(msg)
+    return msg
 
-            if min(left_scan) < 1.0 and error_angle < 0:
-                move_cmd.angular.z = -1
-                move_cmd.linear.x = 0
-            elif min(right_scan) < 1.0 and error_angle > 0:
-                move_cmd.angular.z = 1
-                move_cmd.linear.x = 0
+def follow_person_legs():
+    rospy.init_node('follow_person_legs', anonymous=True)
+    tfBuffer = tf2_ros.Buffer()
+    listener = tf2_ros.TransformListener(tfBuffer)
+    rate = rospy.Rate(10)  # 10 Hz - should this be 1? idk
+    transform = TransformStamped()
 
-        self.cmd_pub.publish(move_cmd)
+    while not rospy.is_shutdown():
+        msg = Twist()
+        try:
+            transform = tfBuffer.lookup_transform('base_link', 'person', rospy.Time())
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            print("me not working")
+            rate.sleep()
+            continue
 
-    def person_callback(self, msg):
-        if msg.people:
-            self.person_position = msg.people[0]
+        (roll, pitch, yaw) = euler_from_quaternion([transform.transform.rotation.x, transform.transform.rotation.y, transform.transform.rotation.z, transform.transform.rotation.w])
+
+        print(np.linalg.norm(np.array([transform.transform.translation.x, transform.transform.translation.y, transform.transform.translation.z])))
+        msg.linear.x = 0.2 * np.linalg.norm(np.array([transform.transform.translation.x, transform.transform.translation.y]))
+        msg.angular.z = yaw
+
+        msg = avoid_obstacle(msg)
+
+        rate.sleep()
 
 if __name__ == '__main__':
-    rospy.init_node('person_follower')
-    follower = PersonFollower()
-    rospy.spin()
+    try:
+        cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        laser_sub = rospy.Subscriber('/base_scan', LaserScan, laser_callback)
+        follow_person_legs()
+    except rospy.ROSInterruptException:
+        pass
