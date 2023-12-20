@@ -1,37 +1,33 @@
 #!/usr/bin/env python
-
-
 import rospy
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import LaserScan  # Import the correct message type
 
+# Global variable to store the closest distance
+closest_distance = float('inf')
 
 def callback(data):
-    # Assuming the LaserScan message might have 'inf' values, we filter them out
-    valid_readings = [reading for reading in data.ranges if reading != float('inf')]
-    
-    # Check if there are valid readings
-    if valid_readings:
-        closest_reading = min(valid_readings)
-        rospy.loginfo("Closest reading: %f", closest_reading)
-    else:
-        rospy.loginfo("No valid laser readings received.")
+    global closest_distance
 
+    # Extract the laser scan data
+    laser_data = data.ranges
+
+    # Loop through the laser scan data to find the closest reading
+    for distance in laser_data:
+        if distance < closest_distance:
+            closest_distance = distance
+
+    # Print the closest distance
+    rospy.loginfo('Closest distance: %f', closest_distance)
 
 def listener():
-    # Initialize the node as before
-    rospy.init_node('base_scan_listener', anonymous=True)
-    
-    # Subscribe to the /base_scan topic instead of 'chatter'
-    rospy.Subscriber("/base_scan", LaserScan, callback)
-    
-    # Keep the node alive as before
-    rospy.spin()
+    global closest_distance
 
+    rospy.init_node('base_listener', anonymous=True)
+
+    # Subscribe to the /base_scan topic with the correct message type
+    rospy.Subscriber('/base_scan', LaserScan, callback)
+
+    rospy.spin()
 
 if __name__ == '__main__':
     listener()
-
-
-
-
-

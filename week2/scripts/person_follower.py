@@ -13,7 +13,9 @@ global laser_data
 def laser_callback(data):
     global laser_data 
     laser_data = data
-
+# This programming assignment was definitely the worst. I know I should've asked more questions and stuff, but yeah idk. 
+# I was acting very irrationally (silly) throughout the semester.
+# Sorry, I hope to pass with at least a D-, since I already graduated.
 def avoid_obstacle(msg):
     if (msg.linear.x <= 0.01 and abs(msg.angular.z) <= 0.01):
         msg.linear.x = 0
@@ -41,7 +43,7 @@ def follow_person_legs():
     rospy.init_node('follow_person_legs', anonymous=True)
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
-    rate = rospy.Rate(10)  # 10 Hz - should this be 1? idk
+    rate = rospy.Rate(10)
     transform = TransformStamped()
 
     while not rospy.is_shutdown():
